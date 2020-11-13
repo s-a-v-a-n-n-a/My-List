@@ -1,552 +1,330 @@
 #include "MyList.h"
-#include "AllConsts.h"
+#include "ListPicture.c"
+#include "AllSettings.h"
 
-#define ALL_DUMP
+#define SLOW_PRINT
 
 #define ASSERTION(code)                                                  \
     fprintf(stderr, "-----------------!WARNING!----------------\n");     \
     fprintf(stderr, "IN FILE %s\nIN LINE %d\n", __FILE__, __LINE__);     \
-    assertion(code);                                                     \
-
-
-#define VERIFYING(that_list, mode);                                      \
-    list_code check = list_verifier(that_list);                          \
-    if (check != LIST_OK)                                                \
-    {                                                                    \
-        ASSERTION(check);                                                \
-        list_dump((*that_list), check, mode);                            \
-    }                                                                    \
-    if (!strcmp(mode, "DESTRUCTION"))                                    \
-        list_dump((*that_list), check, mode);
-
-#define QUESTION_VERIFYING(that_list, mode);                             \
-    if (!strcmp(mode, "DELETION"))                                       \
-    {                                                                    \
-        if ((long long int)((*that_list)->length) <= 0)                  \
-        {                                                                \
-            ASSERTION(LIST_UNDERFLOW);                                   \
-            list_dump((*that_list), LIST_UNDERFLOW, mode);               \
-            return LIST_UNDERFLOW;                                       \
-        }                                                                \
-    }                                                                    \
-    if (where > (*that_list)->length || where < 0)                       \
-    {                                                                    \
-        ASSERTION(LIST_OVERFLOW);                                        \
-        list_dump((*that_list), LIST_OVERFLOW, mode);                    \
-        return LIST_OVERFLOW;                                            \
-    }
+    list_print_errors(code);
 
 
 List* list_new(size_t list_size)
 {
-    List* new_list = NULL;
-
-    if (list_construct(&new_list, list_size) != LIST_OK)
+    List* new_list = (List*)calloc(1, sizeof(List));
+    if (!new_list)
     {
-        list_destruct(&new_list);
+        list_print_list_appearance(NULL, LIST_NO_CONSTRUCT, LIST_CONSTRUCT_FUNCTION_IDENTIFIER);
+        return NULL;
+    }
+
+    if (list_construct(new_list, list_size) != LIST_OK)
+    {
+        list_destruct(new_list);
         return NULL;
     }
 
     return new_list;
 }
 
-static list_code list_construct(List** that_list, const size_t list_size)
+list_code list_delete(List *that_list)
 {
-    (*that_list) = (List*)calloc(1, sizeof(List));
-    if (!(*that_list))
-    {
-        list_dump(NULL, LIST_NO_CONSTRUCT, LIST_CONSTRUCT);
-        return LIST_NO_CONSTRUCT;
-    }
+    list_code code = list_destruct(that_list);
 
-    (*that_list)->capacity = list_size;
-    (*that_list)->sorted = 1;
-    (*that_list)->first_free = 0;
-    (*that_list)->head = 0;
-    (*that_list)->tail = 0;
-    (*that_list)->data = (list_elem*)calloc(list_size + 1, sizeof(list_elem));
-    if (!(*that_list)->data)
+    if (code == LIST_OK)
     {
-        ASSERTION(LIST_NO_CONSTRUCT);
-        list_dump(NULL, LIST_NO_CONSTRUCT, LIST_CONSTRUCT);
-        return LIST_NO_CONSTRUCT;
+        free(that_list);
+        return LIST_OK;
     }
+    else
+        return code;
+}
 
-    (*that_list)->next = (long long*)calloc(list_size + 1, sizeof(long long));
-    if (!(*that_list)->next)
-    {
-        ASSERTION(LIST_NO_CONSTRUCT);
-        list_dump(NULL, LIST_NO_CONSTRUCT, LIST_CONSTRUCT);
-        return LIST_NO_CONSTRUCT;
-    }
+list_code list_construct(List *that_list, const size_t list_size)
+{
+    that_list->capacity   = list_size;
+    that_list->sorted     = 1;
+    that_list->first_free = 1;
 
-    (*that_list)->prev = (long long*)calloc(list_size + 1, sizeof(long long));
-    if (!(*that_list)->prev)
+    that_list->data = (list_elem_type*)calloc(list_size + 1, sizeof(list_elem_type));
+    that_list->next = (size_t*)calloc(list_size + 1, sizeof(size_t));
+    that_list->prev = (size_t*)calloc(list_size + 1, sizeof(size_t));
+
+    if (!that_list->data || !that_list->next || !that_list->prev)
     {
         ASSERTION(LIST_NO_CONSTRUCT);
-        list_dump(NULL, LIST_NO_CONSTRUCT, LIST_CONSTRUCT);
+        list_print_list_appearance(NULL, LIST_NO_CONSTRUCT, LIST_CONSTRUCT_FUNCTION_IDENTIFIER);
         return LIST_NO_CONSTRUCT;
     }
-
-    for (long long i = 0; i <= list_size; i++)
+    that_list->data[0] = NAN;
+    that_list->next[0] = 0;
+    that_list->prev[0] = 0;
+    for (size_t i = 1; i <= list_size; i++)
     {
-        (*that_list)->next[i] = i + 1;
-        (*that_list)->prev[i] = i - 1;
-        (*that_list)->data[i] = NAN;
+        that_list->data[i] = NAN;
+        that_list->next[i] = i + 1;
+        that_list->prev[i] = i - 1;
     }
-    (*that_list)->next[list_size] = -1;
-    (*that_list)->prev[0] = list_size;
 
-    (*that_list)->length = 0;
+    that_list->length = 0;
 
     return LIST_OK;
 }
 
-list_code list_destruct(List** that_list)
+list_code list_destruct(List *that_list)
 {
-    VERIFYING(that_list, LIST_DESTRUCT);
+    if (!that_list)
+        return LIST_DELETED;
 
-    if (*that_list)
-    {
-        if ((*that_list)->data)
-            free((*that_list)->data);
-        if ((*that_list)->next)
-            free((*that_list)->next);
-
-        free(*that_list);
-    }
+    if (that_list->data)
+        free(that_list->data);
+    if (that_list->next)
+        free(that_list->next);
+    if (that_list->prev)
+        free(that_list->prev);
 
     return LIST_OK;
 }
 
-list_code list_resize(List** that_list, const double amount)
+list_code list_resize(List *that_list, const double amount)
 {
-    VERIFYING(that_list, LIST_RESIZE);
-
-    if ((*that_list)->capacity > ((size_t)-1) / 2)
+    if (that_list->capacity > ((size_t)-1) / 2)
     {
         ASSERTION(LIST_TOO_BIG);
-        list_dump((*that_list), LIST_TOO_BIG, LIST_RESIZE);
+        list_print_list_appearance(that_list, LIST_TOO_BIG, LIST_RESIZE_FUNCTION_IDENTIFIER);
+        return LIST_TOO_BIG;
     }
 
-    size_t new_capacity = (size_t)((*that_list)->capacity * amount);
+    size_t new_capacity = (size_t)(that_list->capacity * amount);
 
-    list_elem* new_data = (list_elem*)realloc((*that_list)->data, sizeof(list_elem) * (new_capacity + 1));
-    if (new_data) (*that_list)->data = new_data;
+    list_elem_type* new_data = (list_elem_type*)realloc(that_list->data, sizeof(list_elem_type) * (new_capacity + 1));
+    if (new_data) that_list->data = new_data;
 
-    long long* new_next = (long long*)realloc((*that_list)->next, sizeof(long long) * (new_capacity + 1));
-    if (new_next) (*that_list)->next = new_next;
+    size_t* new_next = (size_t*)realloc(that_list->next, sizeof(size_t) * (new_capacity + 1));
+    if (new_next) that_list->next = new_next;
 
-    long long* new_prev = (long long*)realloc((*that_list)->prev, sizeof(long long) * (new_capacity + 1));
-    if (new_prev) (*that_list)->prev = new_prev;
+    size_t* new_prev = (size_t*)realloc(that_list->prev, sizeof(size_t) * (new_capacity + 1));
+    if (new_prev) that_list->prev = new_prev;
 
     if (!new_data || !new_next || !new_prev)
     {
         ASSERTION(LIST_NO_MEMORY);
-        list_dump((*that_list), LIST_NO_MEMORY, LIST_RESIZE);
+        list_print_list_appearance(that_list, LIST_NO_MEMORY, LIST_RESIZE_FUNCTION_IDENTIFIER);
+        return LIST_NO_MEMORY;
     }
 
     if (amount > 1)
     {
-        for (long long i = (*that_list)->length; i <= new_capacity; i++)
+        for (size_t i = that_list->length + 1; i <= new_capacity; i++)
         {
-            (*that_list)->next[i] = i + 1;
-            (*that_list)->prev[i] = i - 1;
-            (*that_list)->data[i] = NAN;
+            that_list->next[i] = i + 1;
+            that_list->prev[i] = i - 1;
+            that_list->data[i] = NAN;
         }
-        (*that_list)->next[new_capacity] = -1;
     }
 
-    (*that_list)->capacity = new_capacity;
-
-    #ifdef ALL_DUMP
-    list_dump(*that_list, LIST_OK, LIST_RESIZE);
-    #endif
+    that_list->capacity = new_capacity;
 
     return LIST_OK;
 }
 
-list_code list_insert(List** that_list, const long long where, const list_elem value)
+list_code list_insert(List *that_list, const size_t before_physical_index, const list_elem_type value)
 {
-    VERIFYING(that_list, LIST_INSERT);
-    QUESTION_VERIFYING(that_list, LIST_INSERT);
+    list_code request = list_request_verifier(that_list, LIST_INSERT_FUNCTION_IDENTIFIER, before_physical_index);
+    if (request != LIST_OK)
+        return request;
 
-    if ((*that_list)->length + 1 >= (*that_list)->capacity)
+    if (that_list->length + 1 >= that_list->capacity)
     {
         list_resize(that_list, 2);
     }
-    if (where != (*that_list)->length)
-        (*that_list)->sorted = 0;
+    if (before_physical_index != that_list->length)
+        that_list->sorted = 0;
 
-    long long tmp_free = (*that_list)->first_free;
-    (*that_list)->first_free = (*that_list)->next[(*that_list)->first_free];
+    size_t tmp_free       = that_list->first_free;
+    that_list->first_free = that_list->next[that_list->first_free];
 
-    (*that_list)->data[tmp_free] = value;
+    that_list->data[tmp_free] = value;
 
-    (*that_list)->next[(*that_list)->prev[where]] = tmp_free;
-    (*that_list)->next[tmp_free] = where;
+    that_list->next[tmp_free] = that_list->next[that_list->prev[before_physical_index]];
+    that_list->next[that_list->prev[before_physical_index]] = tmp_free;
 
-    (*that_list)->prev[tmp_free] = (*that_list)->prev[where];
+    that_list->prev[tmp_free] = that_list->prev[before_physical_index];
+    that_list->prev[that_list->next[tmp_free]] = tmp_free;
 
-    if (tmp_free != where)
-        (*that_list)->prev[where] = tmp_free;
-
-
-    if (!where)
-    {
-        (*that_list)->head = tmp_free;
-        (*that_list)->prev[tmp_free] = (*that_list)->tail;
-        (*that_list)->next[(*that_list)->tail] = tmp_free;
-    }
-
-    if (where == (*that_list)->length)
-    {
-        (*that_list)->tail = tmp_free;
-        (*that_list)->next[tmp_free] = (*that_list)->head;
-        (*that_list)->prev[(*that_list)->head] = (*that_list)->tail;
-    }
-
-    (*that_list)->length++;
-
-    #ifdef ALL_DUMP
-    list_dump(*that_list, LIST_OK, LIST_INSERT);
-    #endif
+    that_list->length++;
 
     return LIST_OK;
 }
 
-list_code list_delete(List** that_list, const long long where, list_elem* value)
+list_code list_insert_front(List *that_list, const list_elem_type value)
 {
-    VERIFYING(that_list, LIST_DELETE);
-    QUESTION_VERIFYING(that_list, LIST_DELETE);
+    return list_insert(that_list, that_list->next[0], value);
+}
 
-    if ((*that_list)->length <= (*that_list)->capacity / 2)
+list_code list_insert_back(List *that_list, const list_elem_type value)
+{
+    return list_insert(that_list, that_list->prev[0], value);
+}
+
+list_code list_remove(List *that_list, const size_t physical_index, list_elem_type* value)
+{
+    if (physical_index != that_list->length)
+        that_list->sorted = 0;
+
+    *value = that_list->data[physical_index];
+    that_list->data[physical_index] = NAN;
+
+    that_list->next[that_list->prev[physical_index]] = that_list->next[physical_index];
+    that_list->prev[that_list->next[physical_index]] = that_list->prev[physical_index];
+
+    that_list->next[physical_index] = that_list->first_free;
+    that_list->prev[that_list->first_free] = physical_index;
+    that_list->prev[physical_index] = that_list->prev[0];
+    that_list->first_free = physical_index;
+
+    that_list->length--;
+
+    if (that_list->length <= that_list->capacity / 4)
     {
         list_resize(that_list, 0.5);
     }
 
-    if (where != (*that_list)->length)
-        (*that_list)->sorted = 0;
-
-    *value = (*that_list)->data[where];
-    (*that_list)->data[where] = NAN;
-
-    if (where == (*that_list)->tail)
-        (*that_list)->tail = (*that_list)->prev[where];
-
-    if (where == (*that_list)->head)
-        (*that_list)->head = (*that_list)->next[where];
-
-    (*that_list)->next[(*that_list)->prev[where]] = (*that_list)->next[where];
-    (*that_list)->prev[(*that_list)->next[where]] = (*that_list)->prev[where];
-
-    (*that_list)->next[where] = (*that_list)->first_free;
-    (*that_list)->first_free = where;
-
-    (*that_list)->length--;
-
-    #ifdef ALL_DUMP
-    list_dump(*that_list, LIST_OK, LIST_DELETE);
-    #endif
-
     return LIST_OK;
 }
 
-list_code find_index (List *that_list, const long long where, long long *index)
+list_code list_insert_front(List *that_list, list_elem_type *value)
 {
-    VERIFYING(&that_list, LIST_FIND);
-    QUESTION_VERIFYING(&that_list, LIST_FIND);
+    return list_remove(that_list, that_list->next[0], value);
+}
 
-    long long tmp_index = 0;
-    long long cur_index = that_list->head;
+list_code list_remove_back(List *that_list, list_elem_type *value)
+{
+    return list_remove(that_list, that_list->prev[0], value);
+}
 
-    while (tmp_index < where)
+list_code list_find_index(List *that_list, const size_t logical_index, size_t *physical_index)
+{
+    size_t tmp_index = 0;
+    size_t cur_index = that_list->next[0];
+
+    while (tmp_index <= logical_index + 1)
     {
         tmp_index++;
         cur_index = that_list->next[cur_index];
     }
 
-    *index = that_list->prev[cur_index];
+    *physical_index = cur_index;
 
     return LIST_OK;
 }
 
-list_elem get_element(List* that_list, const long long where)
+list_code list_get_element(List *that_list, const size_t physical_index, list_elem_type *requested_element)
 {
-    VERIFYING(&that_list, LIST_GET);
-    QUESTION_VERIFYING(&that_list, LIST_GET);
+    list_code request = list_request_verifier(that_list, LIST_GET_FUNCTION_IDENTIFIER, physical_index);
+    if (request != LIST_OK)
+        return request;
 
     if (that_list->sorted)
-        return that_list->data[where];
+    {
+        *requested_element = that_list->data[physical_index];
+        return LIST_OK;
+    }
 
-    list_elem element = that_list->data[that_list->head];
-    long long index = that_list->head;
+    list_elem_type element = that_list->data[that_list->next[0]];
+    size_t index = that_list->next[0];
 
-    for (long long i = 0; i < where; i++)
+    for (size_t i = 1; i < physical_index + 1; i++)
     {
         index = that_list->next[index];
         element = that_list->data[index];
     }
 
-    #ifdef ALL_DUMP
-    list_dump(that_list, LIST_OK, LIST_GET);
-    #endif
-
-    return element;
-}
-
-long long get_head_index(List *that_list)
-{
-    return that_list->head;
-}
-
-long long get_tail_index(List *that_list)
-{
-    return that_list->tail;
-}
-
-long long get_next_index(List *that_list, long long index)
-{
-    return that_list->next[index];
-}
-
-long long get_prev_index(List *that_list, long long index)
-{
-    return that_list->prev[index];
-}
-
-list_code list_sort(List** that_list)
-{
-    VERIFYING(that_list, LIST_SORT);
-
-    long long index = (*that_list)->head;
-    if (!(*that_list)->sorted)
-    {
-        list_elem* new_data = (list_elem*)calloc((*that_list)->capacity, sizeof(list_elem));
-        if (!new_data)
-        {
-            ASSERTION(LIST_NO_MEMORY);
-            list_dump(*that_list, LIST_NO_MEMORY, LIST_SORT);
-            list_destruct(that_list);
-        }
-
-        for (long long i = 0; i < (*that_list)->length; i++)
-        {
-            new_data[i] = (*that_list)->data[index];
-
-            index = (*that_list)->next[index];
-        }
-        free((*that_list)->data);
-        (*that_list)->data = new_data;
-
-        for (long long i = 0; i < (*that_list)->length; i++)
-        {
-            (*that_list)->next[i] = (i + 1) % (*that_list)->length;
-            (*that_list)->prev[i] = (i - 1 + (*that_list)->length) % (*that_list)->length;
-        }
-        (*that_list)->head = 0;
-        (*that_list)->tail = (*that_list)->length - 1;
-        (*that_list)->sorted = 1;
-
-        for (long long i = (*that_list)->length; i < (*that_list)->capacity - 1; i++)
-        {
-            (*that_list)->next[i] = i + 1;
-            (*that_list)->prev[i] = i - 1;
-        }
-        (*that_list)->next[(*that_list)->capacity - 1] = -1;
-        (*that_list)->prev[(*that_list)->capacity - 1] = (*that_list)->capacity - 1;
-    }
-
-    #ifdef ALL_DUMP
-    list_dump(*that_list, LIST_OK, LIST_SORT);
-    #endif
+    *requested_element = element;
 
     return LIST_OK;
 }
 
-void assertion(list_code code)
+size_t list_get_head_index(List *that_list)
 {
-    switch (code)
-    {
-    case LIST_OK:
-
-        break;
-
-    case LIST_NULL:
-
-        printf("Error: NO POINTER ON STACK FOUND\n\n");
-        break;
-
-    case LIST_SEG_FAULT:
-
-        printf("Error: USAGE OF PROHIBITED PART OF MEMORY\n\n");
-        break;
-
-    case LIST_DELETED:
-
-        printf("Error: DEALING WITH NON-EXISTENT UNIT OR THE UNIT WAS DAMAGED\n\n");
-        break;
-
-    case LIST_NO_CONSTRUCT:
-
-        printf("Error: NO MEMORY FOR CONSTRUCTION\n\n");
-        break;
-
-    case LIST_UNDERFLOW:
-
-        printf("Error: GOING OUT OF BONDS OF LIST\n\n");
-        break;
-
-    case LIST_OVERFLOW:
-
-        printf("Error: WRONG PLACE OF INSERTION\n\n");
-        break;
-
-    case LIST_NO_MEMORY:
-
-        printf("Error: NO FREE MEMORY\n\n");
-        break;
-
-    case LIST_TOO_BIG:
-
-        printf("Error: TOO BIG CAPACITY REQUIRED\n\n");
-        break;
-
-    case LIST_CONNECT_ERROR:
-
-        printf("Error: PROBLEM WITH ELEMENTS CONNECTION\n\n");
-        break;
-
-    default:
-        break;
-    }
+    return that_list->next[0];
 }
 
-void list_call(const char* name_file, const char* new_name)
+size_t list_get_tail_index(List *that_list)
 {
-    char temp[512];
-    sprintf(temp, "dot %s -T%s -O", name_file, new_name);
-    system((char*)temp);
+    return that_list->prev[0];
 }
 
-void print_sequence(FILE *picture, List *that_list, const char state, const char *color)
+list_code list_get_next_index(List *that_list, size_t physical_index, list_elem_type *next_index)
 {
-    long long index = that_list->head;
+    list_code request = list_request_verifier(that_list, LIST_GET_FUNCTION_IDENTIFIER, physical_index);
+    if (request != LIST_OK)
+        return request;
 
-    fprintf(picture, "  ");
-    for (long long i = 0; i < that_list->length; i++)
-    {
-        fprintf(picture, "nod%lld:<%c%lld>->", index, state, index);
+    *next_index = that_list->next[physical_index];
 
-        index = that_list->prev[index];
-    }
-    fprintf(picture, "nod%lld:<%c%lld>", index, state, index);
-    fprintf(picture, "[color=\"%s\", arrowsize = \"1\"]", color);
-    fprintf(picture, ";\n");
+    return LIST_OK;
 }
 
-void print_main_sequence(FILE *picture, List *that_list, long long start, long long end, long long index)
+list_code list_get_prev_index(List *that_list, size_t physical_index, list_elem_type *prev_index)
 {
-    for (long long i = start; i < end; i++)
-    {
-        fprintf(picture, "nod%lld->", index);
+    list_code request = list_request_verifier(that_list, LIST_GET_FUNCTION_IDENTIFIER, physical_index);
+    if (request != LIST_OK)
+        return request;
 
-        index = that_list->next[index];
-    }
+    *prev_index = that_list->prev[physical_index];
+
+    return LIST_OK;
 }
 
-#define MAKE_BOX                                                                   \
-    fprintf(picture, "label = \" <p%lld> %lld |", index, that_list->prev[index]);  \
-    fprintf(picture, "{ %lld | ", index);                                          \
-    fprintf(picture, "  %lf } |", that_list->data[index]);                         \
-    fprintf(picture, "<n%lld> %lld \"];\n", index, that_list->next[index]);
-
-void print_state_list(List* that_list, const char* picture_name)
+list_code list_slow_sort(List *that_list)
 {
-    FILE* picture = fopen(picture_name, "wb");
-
-    fprintf(picture, "digraph list\n{\n  rankdir = LR;\n");
-
-    long long index = that_list->head;
-
-    char next_bad = 0;
-    char now_bad  = 0;
-
-    for (long long i = 0; i < that_list->length; i++)
+    if (!that_list->sorted)
     {
-        if (next_bad)
+        size_t index = 0;
+        list_elem_type* new_data = (list_elem_type*)calloc(that_list->capacity + 1, sizeof(list_elem_type));
+        if (!new_data)
         {
-            next_bad = 0;
-            now_bad = 1;
-        }
-        else
-            now_bad = 0;
-
-        fprintf(picture, "  nod%ld[shape=\"record\", ", index);
-        if (index != that_list->prev[that_list->next[index]] || (that_list->next[index] == that_list->head && i < that_list->length - 1))
-        {
-            next_bad = 1;
+            ASSERTION(LIST_NO_MEMORY);
+            list_print_list_appearance(that_list, LIST_NO_MEMORY, LIST_SORT_FUNCTION_IDENTIFIER);
+            list_destruct(that_list);
         }
 
-        if (now_bad)
+        for (size_t i = 0; i <= that_list->length; i++)
         {
-            fprintf(picture, "color = \"%s\", ", COLOR_LINE_BAD);
-            fprintf(picture, "fillcolor = \"%s\", ", COLOR_FILL_BAD);
-        }
-        else
-        {
-            fprintf(picture, "color = \"%s\", ", COLOR_LINE);
-            fprintf(picture, "fillcolor = \"%s\", ", COLOR_FILL);
-        }
-        fprintf(picture, "style = filled, ");
-        MAKE_BOX
+            new_data[i] = that_list->data[index];
 
-        index = that_list->next[index];
+            index = that_list->next[index];
+        }
+        free(that_list->data);
+        that_list->data = new_data;
+
+        for (size_t i = 0; i <= that_list->length + 1; i++)
+        {
+            that_list->next[i] = (i + 1) % (that_list->length + 1);
+            that_list->prev[i] = (i + that_list->length) % (that_list->length + 1);
+        }
+        that_list->first_free = that_list->length + 1;
+        that_list->sorted     = 1;
+
+        for (size_t i = that_list->length + 1; i <= that_list->capacity; i++)
+        {
+            that_list->data[i] = NAN;
+            that_list->next[i] = i + 1;
+            that_list->prev[i] = i - 1;
+        }
     }
 
-    fprintf(picture, "  ");
-
-    print_main_sequence(picture, that_list, 0, that_list->length, index);
-    fprintf(picture, "nod%lld", that_list->head);
-    fprintf(picture, "[color = \"Black\"];\n");
-
-    print_sequence(picture, that_list, 'n', "Crimson");
-    print_sequence(picture, that_list, 'p', "DarkMagenta");
-
-    index = that_list->first_free;
-    for (unsigned long long i = that_list->length; i <= that_list->capacity; i++)
-    {
-        fprintf(picture, "  nod%lld[shape=\"record\", ", index);
-        fprintf(picture, "color = \"Black\", fillcolor = \"%s\", style = filled, ", COLOR_FILL_ADD);
-        MAKE_BOX
-
-        index = that_list->next[index];
-    }
-    index = that_list->first_free;
-    fprintf(picture, "  nod%lld->", that_list->tail);
-
-    print_main_sequence(picture, that_list, that_list->length, that_list->capacity, index);
-    fprintf(picture, "nod%u", that_list->capacity);
-    fprintf(picture, "[color = \"Black\"];\n");
-
-    fprintf(picture, "}");
-    fclose(picture);
-
-    list_call(picture_name, PICTURE_FORMAT);
+    return LIST_OK;
 }
 
-#define MAKE_PICTURE                                                \
-    if (that_list->sorted)                                          \
-        fprintf(log, "CURRENT STATE OF SORTING IS TRUE\n");         \
-    else                                                            \
-        fprintf(log, "CURRENT STATE OF SORTING IS FALSE\n");        \
-    fprintf(log, "CURRENT CAPACITY IS %u\n", that_list->capacity);  \
-    fprintf(log, "CURRENT SIZE IS     %lld\n", that_list->length);  \
-    print_state_list(that_list, picture_name);                      \
-    fprintf(log, "<img src=%s>", picture_png_name);
+void list_print_errors(list_code code)
+{
+    printf("Error: %s\n", state_text[code]);
+}
 
-
-void list_dump(List* that_list, list_code code, const char* who)
+void list_print_list_appearance(List *that_list, list_code code, const char* function)
 {
     static long int doing = 0;
 
@@ -555,79 +333,56 @@ void list_dump(List* that_list, list_code code, const char* who)
         mode = "wb";
     else
         mode = "ab";
-    FILE* log = fopen("list_dump.html", mode);
+    FILE* log = fopen("list_print_list_appearance.html", mode);
 
-    fprintf(log, "<pre><tt>\n");
+    fprintf(log, "<pre><font size=\"5\"  face=\"Times New Roman\">\n");
 
-    fprintf(log, "CURRENT STATE OF LIST\n");
-    fprintf(log, "THE NEWS FROM %s\n", who);
+    fprintf(log, "<p><span style=\"font-weight: bold\">CURRENT STATE OF LIST</span></p>\n");
+    fprintf(log, "THE NEWS FROM %s\n", function);
 
-    char picture_name[MAX_PICTURE_NAME];
-    sprintf(picture_name, "%s%d.txt", PICTURE_FILE_CODE, doing);
-    char picture_png_name[MAX_PICTURE_NAME];
-    sprintf(picture_png_name, "%s%d.txt.%s", PICTURE_FILE_CODE, doing, PICTURE_FORMAT);
+    fprintf(log, "%s", state_text[code]);
+    if (that_list->sorted)
+        fprintf(log, "CURRENT STATE OF SORTING IS <span style=\"font-weight: bolder\">TRUE</span>\n");
+    else
+        fprintf(log, "CURRENT STATE OF SORTING IS <span style=\"font-weight: bolder\">FALSE</span>\n");
 
-     switch (code)
-    {
-        case LIST_OK:
+    fprintf(log, "CURRENT CAPACITY IS %u\n", that_list->capacity);
+    fprintf(log, "CURRENT SIZE IS            %u\n", that_list->length);
 
-            fprintf(log, "EVERYTHING IS OKAY\n");
-            MAKE_PICTURE
-            break;
+    fprintf(log, "</font><tt>\n");
 
-        case LIST_NULL:
+    #ifdef SLOW_PRINT
+    char picture_name[MAX_PICTURE_NAME] = "";
+    sprintf(picture_name, "%s", PICTURE_FILE_CODE);
 
-            fprintf(log, "LIST DOES NOT EXIST\n");
-            break;
+    char picture_adding[MAX_PICTURE_NAME] = "";
+    sprintf(picture_adding, "%d.txt", doing);
 
-        case LIST_SEG_FAULT:
+    strncat(picture_name, picture_adding, MAX_PICTURE_NAME);
 
-            fprintf(log, "MEMORY ACCESS DENIED\n");
-            break;
+    char picture_format_name[MAX_PICTURE_NAME] = "";
+    sprintf(picture_format_name, "%s", PICTURE_FILE_CODE);
 
-        case LIST_DELETED:
+    strncat(picture_format_name, picture_adding, MAX_PICTURE_NAME);
 
-            fprintf(log, "DEALING WITH NON-EXISTENT UNIT OR THE UNIT WAS DAMAGED\n");
-            break;
+    char picture_format_adding[MAX_PICTURE_NAME] = "";
+    sprintf(picture_format_adding, ".%s", PICTURE_FORMAT);
 
-        case LIST_NO_CONSTRUCT:
+    strncat(picture_format_name, picture_format_adding, MAX_PICTURE_NAME);
 
-            fprintf(log, "NO MEMORY FOR CONSTRUCTION\n");
-            break;
+    list_slow_print_logical_state(that_list, picture_name);
+    fprintf(log, "<img src=%s>\n", picture_format_name);
+    #endif
 
-        case LIST_UNDERFLOW:
+    sprintf(picture_name, "%s", PICTURE_FILE_CODE_REAL);
+    strncat(picture_name, picture_adding, MAX_PICTURE_NAME);
 
-            fprintf(log, "NOTHING TO DELETE\n");
-            MAKE_PICTURE
-            break;
+    sprintf(picture_format_name, "%s", PICTURE_FILE_CODE_REAL);
+    strncat(picture_format_name, picture_adding, MAX_PICTURE_NAME);
+    strncat(picture_format_name, picture_format_adding, MAX_PICTURE_NAME);
 
-        case LIST_OVERFLOW:
-
-            fprintf(log, "WRONG ADDRESS\n");
-            MAKE_PICTURE
-            break;
-
-        case LIST_NO_MEMORY:
-
-            fprintf(log, "MEMORY ACCESS DENIED\n");
-            MAKE_PICTURE
-            break;
-
-        case LIST_TOO_BIG:
-
-            fprintf(log, "TOO BIG CAPACITY IS REQUIRED\n");
-            MAKE_PICTURE
-            break;
-
-        case LIST_CONNECT_ERROR:
-
-            fprintf(log, "ERROR WITH ACCESS TO ELEMENTS\n");
-            MAKE_PICTURE
-            break;
-
-        default:
-            break;
-    }
+    list_print_physical_state(that_list, picture_name);
+    fprintf(log, "<img src=%s>", picture_format_name);
 
     fprintf(log, "\n");
 
@@ -636,37 +391,64 @@ void list_dump(List* that_list, list_code code, const char* who)
     doing++;
 }
 
-list_code is_pointer_valid(List* that_list)
+list_code list_is_pointer_valid(List *that_list)
 {
     if (!that_list || !that_list->data || !that_list->next || !that_list->prev)
         return LIST_NULL;
 
-    if ((long long)(that_list) <= 4096 || (long long)(that_list->data) <= 4096 || (long long)(that_list->next) <= 4096 || (long long)(that_list->prev) <= 4096)
+    if ((size_t)(that_list) <= 4096 || (size_t)(that_list->data) <= 4096 || (size_t)(that_list->next) <= 4096 || (size_t)(that_list->prev) <= 4096)
         return LIST_SEG_FAULT;
 
     return LIST_OK;
 }
 
-list_code list_verifier(List** that_list)
+list_code list_request_verifier(List *that_list, const char *mode, size_t request)
 {
-    list_code indicator = is_pointer_valid(*that_list);
+    if (!strcmp(mode, "REMOVING"))
+    {
+        if ((size_t)(that_list->length) <= 0)
+        {
+            ASSERTION(LIST_UNDERFLOW);
+            list_print_list_appearance(that_list, LIST_UNDERFLOW, mode);
+            return LIST_UNDERFLOW;
+        }
+    }
+    if (request > (that_list->length + 1))
+    {
+        ASSERTION(LIST_OVERFLOW);
+        list_print_list_appearance(that_list, LIST_OVERFLOW, mode);
+        return LIST_OVERFLOW;
+    }
+
+    return LIST_OK;
+}
+
+list_code list_verifier(List *that_list, const char* function)
+{
+    list_code indicator = list_is_pointer_valid(that_list);
     if (indicator != LIST_OK)
     {
+        ASSERTION(indicator);
+        list_print_list_appearance(that_list, LIST_OK, function);
         return indicator;
     }
 
-    long long index = (*that_list)->head;
+    size_t index = 0;
 
-    for (long long i = 0; i < (*that_list)->length; i++)
+    for (size_t i = 0; i < that_list->length; i++)
     {
-        if (index != (*that_list)->prev[(*that_list)->next[index]])
+        if (index != that_list->prev[that_list->next[index]] ||
+          ((that_list->next[index] == 0 && i < that_list->length)))
+        {
+            ASSERTION(LIST_CONNECT_ERROR);
+            list_print_list_appearance(that_list, LIST_CONNECT_ERROR, function);
             return LIST_CONNECT_ERROR;
+        }
 
-        if ((*that_list)->next[index] == (*that_list)->head && i < (*that_list)->length - 1)
-            return LIST_CONNECT_ERROR;
-
-        index = (*that_list)->next[index];
+        index = that_list->next[index];
     }
+
+    list_print_list_appearance(that_list, LIST_OK, function);
 
     return LIST_OK;
 }

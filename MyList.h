@@ -4,35 +4,33 @@
     It has construction, destruction, insertion, deletion, resizing, looking for head and tail, next and previous elements.\n
     It can also sort elements int he order and get the index of needed element.\n
     Thank you for using this program!
-    \warning The sortion takes the time of O(n), get_element - O(n). Please, try to put elements at the beginning and at the end of the list.\n
+    \warning The sortion takes the time of O(n), get_element - O(n) at bad cases. Please, try to put elements at the end of the list.\n
+             Function list_construct will cause undefined behavior if you don't alloc the construction of the list before\n
     \authors Anna Savchuk
-    \note    To change the type, change the typedef about list_elem in MyList.c\n
-             If you want functions not to print state of the list at the end, comment the define about ALL_DUMP in AllConsts.h\n
+    \note    To change the type, change the typedef about list_elem_type in AllSettings.c\n
              At the end the last information about the list will be added to log_file\n
 */
+#pragma once
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include "AllConsts.h"
 
-typedef double list_elem;
+#include "AllSettings.h"
 
 typedef struct The_list
 {
-    list_elem  *data;
-    long long  *next;
-    long long  *prev;
+    list_elem_type  *data;
+    size_t          *next;
+    size_t          *prev;
 
-    size_t      length;
-    size_t      capacity;
+    size_t           length;
+    size_t           capacity;
 
-    long long   head;
-    long long   tail;
-    long long   first_free;
+    size_t           first_free;
 
-    char        sorted;
+    char             sorted;
 } List;
 
 typedef enum list_code_errors
@@ -49,14 +47,28 @@ typedef enum list_code_errors
     LIST_CONNECT_ERROR
 } list_code;
 
-const char LIST_CONSTRUCT[]     = "CONSTRUCTION";
-const char LIST_DESTRUCT[]      = "DESTRUCTION";
-const char LIST_INSERT[]        = "INSERTION";
-const char LIST_RESIZE[]        = "RESIZING";
-const char LIST_DELETE[]        = "DELETION";
-const char LIST_FIND[]          = "FINDING";
-const char LIST_SORT[]          = "SORTING";
-const char LIST_GET[]           = "GETTING";
+const char *state_text[]
+{
+    "EVERYTHING IS OKAY\n",
+    "LIST DOES NOT EXIST\n",
+    "MEMORY ACCESS DENIED\n",
+    "DEALING WITH NON-EXISTENT UNIT OR THE UNIT WAS DAMAGED\n",
+    "NO MEMORY FOR CONSTRUCTION\n",
+    "NOTHING TO DELETE\n",
+    "WRONG ADDRESS\n",
+    "MEMORY ACCESS DENIED\n",
+    "TOO BIG CAPACITY IS REQUIRED\n",
+    "ERROR WITH ACCESS TO ELEMENTS\n"
+};
+
+const char LIST_CONSTRUCT_FUNCTION_IDENTIFIER[]  = "CONSTRUCTION";
+const char LIST_DESTRUCT_FUNCTION_IDENTIFIER[]   = "DESTRUCTION";
+const char LIST_INSERT_FUNCTION_IDENTIFIER[]     = "INSERTION";
+const char LIST_RESIZE_FUNCTION_IDENTIFIER[]     = "RESIZING";
+const char LIST_REMOVE_FUNCTION_IDENTIFIER[]     = "REMOVING";
+const char LIST_FIND_INDEX_FUNCTION_IDENTIFIER[] = "FINDING";
+const char LIST_SORT_FUNCTION_IDENTIFIER[]       = "SORTING";
+const char LIST_GET_FUNCTION_IDENTIFIER[]        = "GETTING";
 
 /*!
 Creates a new list and deletes it if the construction failed
@@ -66,16 +78,6 @@ Creates a new list and deletes it if the construction failed
 @param[out]      new_list                  The pointer on the list
 */
 List            *list_new                  (size_t list_size);
-/*!
-Constructs a new list
-
-@param[in]       that_list                 The construction of the list
-@param[in]       list_size                 The size of the list
-
-Returns          LIST_OK                   If everything is ok
-                 LIST_NO_CONSTRUCT         If it was impossible to create the list
-*/
-static list_code list_construct            (List **that_list, const size_t list_size);
 /*!
 Destructs the list
 
@@ -87,7 +89,30 @@ Returns          LIST_OK                   If everything is ok\n
                  LIST_DELETED              If some of the units were deleted\n
                  LIST_CONNECT_ERROR        If the connection between next array and previous array was broken\n
 */
-list_code        list_destruct             (List **that_list);
+list_code        list_delete               (List *that_list);
+/*!
+Constructs the elements of new list
+
+@param[in]       that_list                 The construction of the list
+@param[in]       list_size                 The size of the list
+
+Returns          LIST_OK                   If everything is ok
+                 LIST_NO_CONSTRUCT         If it was impossible to create the list
+
+\warning         Undefined behavior if you don't alloc the construction of the list
+*/
+list_code        list_construct            (List *that_list, const size_t list_size);
+/*!
+Destructs the elements of the list
+@param[in]       that_list                 The construction of the list
+
+Returns          LIST_OK                   If everything is ok\n
+                 LIST_NULL                 If there were not pointers on units of list\n
+                 LIST_SEG_FAULT            If memory access denied\n
+                 LIST_DELETED              If some of the units were deleted\n
+                 LIST_CONNECT_ERROR        If the connection between next array and previous array was broken\n
+*/
+list_code        list_destruct             (List *that_list);
 
 /*!
 Changes the capacity of the list
@@ -103,12 +128,12 @@ Returns          LIST_OK                   If everything is ok\n
                  LIST_NO_MEMORY            If there is no memory to resize the list\n
                  LIST_TOO_BIG              If the new capacity is bigger than the maximum size of the type\n
 */
-list_code        list_resize               (List **that_list, const double amount);
+list_code        list_resize               (List *that_list, const double amount);
 /*!
 Inserts the value into the list
 
 @param[in]       that_list                 The construction of the list
-@param[in]       where                     The index to put value there
+@param[in]       before_physical_index     The index to put value before
 @param[in]       value                     The value to put into the list
 
 Returns          LIST_OK                   If everything is ok\n
@@ -117,10 +142,35 @@ Returns          LIST_OK                   If everything is ok\n
                  LIST_DELETED              If some of the units were deleted\n
                  LIST_OVERFLOW             If the index does not exist or can not be added\n
 */
-list_code        list_insert               (List **that_list, const long long where, const list_elem value);
+list_code        list_insert               (List *that_list, const size_t before_physical_index, const list_elem_type value);
+/*!
+Inserts the value into the front of the list
+
+@param[in]       that_list                 The construction of the list
+@param[in]       value                     The value to put into the list
+
+Returns          LIST_OK                   If everything is ok\n
+                 LIST_NULL                 If there were not pointers on units of list\n
+                 LIST_SEG_FAULT            If memory access denied\n
+                 LIST_DELETED              If some of the units were deleted\n
+                 LIST_OVERFLOW             If the index does not exist or can not be added\n
+*/
+list_code        list_insert_front         (List *that_list, const list_elem_type value);
+/*!
+Inserts the value into the back of the list
+
+@param[in]       that_list                 The construction of the list
+@param[in]       value                     The value to put into the list
+
+Returns          LIST_OK                   If everything is ok\n
+                 LIST_NULL                 If there were not pointers on units of list\n
+                 LIST_SEG_FAULT            If memory access denied\n
+                 LIST_DELETED              If some of the units were deleted\n
+                 LIST_OVERFLOW             If the index does not exist or can not be added\n
+*/
+list_code        list_insert_back          (List *that_list, const list_elem_type value);
 /*!
 Deletes the value of the list
-
 @param[in]       that_list                 The construction of the list
 @param[in]       where                     The index to delete value off
 @param[in]       value                     The value deleting
@@ -132,7 +182,33 @@ Returns          LIST_OK                   If everything is ok\n
                  LIST_UNDERFLOW            If the list is empty\n
                  LIST_OVERFLOW             If the index does not exist or can not be added\n
 */
-list_code        list_delete               (List **that_list, const long long where, list_elem *value);
+list_code        list_remove               (List *that_list, const size_t physical_index, list_elem_type *value);
+/*!
+Removes the value from the front of the list
+
+@param[in]       that_list                 The construction of the list
+@param[in]       value                     The value to put into the list
+
+Returns          LIST_OK                   If everything is ok\n
+                 LIST_NULL                 If there were not pointers on units of list\n
+                 LIST_SEG_FAULT            If memory access denied\n
+                 LIST_DELETED              If some of the units were deleted\n
+                 LIST_OVERFLOW             If the index does not exist or can not be added\n
+*/
+list_code        list_remove_front         (List *that_list, list_elem_type *value);
+/*!
+Removes the value from the back of the list
+
+@param[in]       that_list                 The construction of the list
+@param[in]       value                     The value to put into the list
+
+Returns          LIST_OK                   If everything is ok\n
+                 LIST_NULL                 If there were not pointers on units of list\n
+                 LIST_SEG_FAULT            If memory access denied\n
+                 LIST_DELETED              If some of the units were deleted\n
+                 LIST_OVERFLOW             If the index does not exist or can not be added\n
+*/
+list_code        list_remove_back          (List *that_list, list_elem_type *value);
 /*!
 Finds the index that matces to the sought one
 
@@ -145,21 +221,21 @@ Returns          LIST_OK                   If everything is ok\n
                  LIST_SEG_FAULT            If memory access denied\n
                  LIST_DELETED              If some of the units were deleted\n
                  LIST_OVERFLOW             If the index does not exist or can not be added\n
+
+\warning         Takes the time of O(n). Try to avoid using this function by putting the elements at the end of the list\n
 */
-list_code        find_index                (List *that_list, const long long where, long long *index);
+list_code        list_find_index           (List *that_list, const size_t logical_index, size_t *physical_index);
 /*!
 Finds the element that is located at the given index
 
 @param[in]       that_list                 The construction of the list
-@param[in]       where                     The index element is located at
+@param[in]       physical_index            The index element is located at
+@param[in]       requested_element         The value of the list that was requested
 
 Returns          LIST_OK                   If everything is ok\n
-                 LIST_NULL                 If there were not pointers on units of list\n
-                 LIST_SEG_FAULT            If memory access denied\n
-                 LIST_DELETED              If some of the units were deleted\n
                  LIST_OVERFLOW             If the index does not exist or can not be added\n
 */
-list_elem        get_element               (List *that_list, const long long where);
+list_code       list_get_element           (List *that_list, const size_t physical_index, list_elem_type *requested_element);
 
 /*!
 Finds the index of the first element of the list
@@ -168,7 +244,7 @@ Finds the index of the first element of the list
 
 @param[out]                                The index of the first element of the list
 */
-long long        get_head_index            (List *that_list);
+size_t           list_get_head_index       (List *that_list);
 /*!
 Finds the index of the last element of the list
 
@@ -176,25 +252,29 @@ Finds the index of the last element of the list
 
 @param[out]                                The index of the last element of the list
 */
-long long        get_tail_index            (List *that_list);
+size_t           list_get_tail_index       (List *that_list);
 /*!
 Finds the index of the element of the list after the given one
 
 @param[in]       that_list                 The construction of the list
-@param[in]       index                     The index the element is sought for after
+@param[in]       index                     The index of the element is sought for after
+@param[in]       next_index                The index of the element is sought for
 
-@param[out]                                the index of the element of the list after the given one
+Returns          LIST_OK                   If everything is ok\n
+                 LIST_OVERFLOW             If the index does not exist or can not be added\n
 */
-long long        get_next_index            (List *that_list, long long index);
+list_code        list_get_next_index       (List *that_list, size_t physical_index, list_elem_type *next_index);
 /*!
 Finds the index of the element of the list before the given one
 
 @param[in]       that_list                 The construction of the list
 @param[in]       index                     The index the element is sought for before
+@param[in]       prev_index                The index of the element is sought for
 
-@param[out]                                the index of the element of the list before the given one
+Returns          LIST_OK                   If everything is ok\n
+                 LIST_OVERFLOW             If the index does not exist or can not be added\n
 */
-long long        get_prev_index            (List *that_list, long long index);
+list_code        list_get_prev_index       (List *that_list, size_t physical_index, list_elem_type *prev_index);
 
 /*!
 Sorts the elements of the list at the order of usual array
@@ -207,46 +287,17 @@ Returns          LIST_OK                   If everything is ok\n
                  LIST_DELETED              If some of the units were deleted\n
                  LIST_NO_MEMORY            If there is no memory to sort the list\n
 
-\warning         Takes the time of O(n). Try to avoid using this function
+\warning         Takes the time of O(n). Try to avoid using this function by putting elements at the end of the list.
 */
-list_code        list_sort                 (List **that_list);
+list_code        list_slow_sort            (List *that_list);
 
 /*!
 Prints the errors in the console
 
 @param[in]       code                      The identifier of the error
 */
-void             assertion                 (list_code code);
+void             list_print_errors          (list_code code);
 
-/*!
-Calls the dot-program to make the picture by graphviz
-@param[in]       name_file                 The name of file to make a picture from
-@param[in]       new_name                  The format of the picture
-*/
-void             list_call                 (const char *name_file, const char *new_name);
-/*!
-Outputs the information about the adding nodes of the list
-@param[in]       picture                   The file to print code for graphviz into
-@param[in]       that_list                 The structure of the list
-@param[in]       state                     The indicator if the next-array is printed or the previous one
-@param[in]       color                     The color of edges to connect the nodes
-*/
-void             print_sequence            (FILE *picture, List *that_list, const char state, const char *color);
-/*!
-Outputs the information about the main nodes of the list
-@param[in]       picture                   The file to print code for graphviz into
-@param[in]       that_list                 The structure of the list
-@param[in]       start                     The counter of the array to start with
-@param[in]       end                       The length of the array
-@param[in]       index                     The index of the first element
-*/
-void             print_main_sequence       (FILE *picture, List *that_list, long long start, long long end, long long index);
-/*!
-Outputs the information about the current state of the list into the file
-@param[in]       that_list                 The structure of the list
-@param[in]       picture_name              The name of the file to print the code for graphviz
-*/
-void             print_state_list          (List* that_list, const char* picture_name);
 /*!
 Outputs the information about the current state of the list into "log_file.html"
 
@@ -254,7 +305,7 @@ Outputs the information about the current state of the list into "log_file.html"
 @param[in]       code                      The code of the mistake
 @param[in]       who                       The code of the function requested for dump
 */
-void             list_dump                 (List *that_list, list_code code, const char *who);
+void             list_print_list_appearance (List *that_list, list_code code, const char *function);
 
 /*!
 Checks if all pointers are valid
@@ -264,16 +315,31 @@ Returns          LIST_NULL                 If the pointer does not exists\n
                  LIST_SEG_FAULT            If the pointer points in prohibited for using block of memory\n
                  LIST_OK                   If the pointer is valid\n
 */
-list_code        is_pointer_valid          (List *that_list);
+list_code        list_is_pointer_valid       (List *that_list);
+/*!
+Checks if the request is valid
+
+@param[in]       that_list                 The structure of the list
+@param[in]       mode                      The code of the function requested for dump
+@param[in]       request                   The request to check
+
+Returns          LIST_OK                   If everything is ok\n
+                 LIST_UNDERFLOW            If the list is empty\n
+                 LIST_OVERFLOW             If the index does not exist or can not be added
+*/
+list_code        list_request_verifier       (List *that_list, const char *mode, size_t request);
 /*!
 Checks all of the states of the list
 
 @param[in]       that_list                 The structure of the list
+@param[in]       who                       The code of the function requested for dump
 
 Returns          LIST_OK                   If everything is ok\n
                  LIST_NULL                 If there were not pointers on units of list\n
                  LIST_SEG_FAULT            If memory access denied\n
                  LIST_DELETED              If some of the units were deleted\n
                  LIST_CONNECT_ERROR        If the connection between next array and previous array was broken\n
+
+\warning         Takes the time of O(n). Try to avoid using this function.
 */
-list_code        list_verifier             (List **that_list);
+list_code        list_verifier              (List *that_list, const char *function);

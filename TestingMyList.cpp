@@ -5,10 +5,11 @@
 
 //#define FIRST_TEST
 //#define SECOND_TEST
-//#define THIRD_TEST
+#define THIRD_TEST
 //#define FORTH_TEST
 //#define FIFTH_TEST
-#define SIXTH_TEST
+//#define SIXTH_TEST
+//#define SEVENTH_TEST
 
 void unit_tests();
 
@@ -27,17 +28,22 @@ void unit_tests()
         List* pain = list_new(10);
         printf("cap %lld\n", pain->capacity);
 
-        list_insert(&pain, 0, 10);
-        list_insert(&pain, 1, 20);
-        list_insert(&pain, 2, 30);
-        list_insert(&pain, 1, 40);
+        list_insert(pain, 0, 10);
+        list_insert(pain, 1, 20);
+        list_insert(pain, 2, 30);
+
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
+
+        list_insert(pain, 1, 40);
+
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
 
         double a = 0;
 
-        a = get_element(pain, 1);
+        get_element(pain, 1, &a);
         printf("%lg\n", a);
 
-        list_destruct(&pain);
+        list_destruct(pain);
     }
     #endif
 
@@ -48,21 +54,21 @@ void unit_tests()
 
         double a = 0;
 
-        list_insert(&pain, 0, 10);
-        a = get_element(pain, 0);
+        list_insert(pain, 0, 10);
+        get_element(pain, 0, &a);
         printf("%lg\n", a);
 
-        list_insert(&pain, 1, 11);
-        a = get_element(pain, 1);
+        list_insert(pain, 1, 11);
+        get_element(pain, 1, &a);
         printf("%lg\n", a);
 
-        list_insert(&pain, 2, 12);
+        list_insert(pain, 2, 12);
         a = get_element(pain, 2);
         printf("%lg\n", a);
 
-        list_insert(&pain, 3, 13);
+        list_insert(pain, 3, 13);
 
-        list_destruct(&pain);
+        list_destruct(pain);
     }
     #endif
 
@@ -73,24 +79,26 @@ void unit_tests()
 
         double a = 0;
 
-        list_insert(&pain, 0, 10);
-        list_insert(&pain, 1, 11);
-        list_insert(&pain, 2, 12);
-        list_insert(&pain, 3, 13);
+        list_insert(pain, 0, 10);
+        list_insert(pain, 1, 11);
+        list_insert(pain, 2, 12);
+        list_insert(pain, 3, 13);
 
-        list_dump(pain, LIST_OK, LIST_INSERT);
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
 
-        list_insert(&pain, 1, 14);
-        list_insert(&pain, 1, 15);
-        list_insert(&pain, 0, 16);
+        list_insert(pain, 1, 14);
+        list_insert(pain, 1, 15);
+        list_insert(pain, 0, 16);
 
         pain->prev[2] = 0;
 
-        list_dump(pain, LIST_OK, LIST_INSERT);
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
 
-        list_sort(&pain);
+        list_slow_sort(pain);
 
-        list_destruct(&pain);
+        list_verifier(pain, LIST_SORT_FUNCTION_IDENTIFIER);
+
+        list_destruct(pain);
     }
     #endif
 
@@ -101,20 +109,34 @@ void unit_tests()
 
         double a = 0;
 
-        list_insert(&pain, 0, 1.0);
-        list_insert(&pain, 1, 1.1);
-        list_insert(&pain, 2, 1.2);
-        list_insert(&pain, 3, 1.3);
+        list_insert(pain, 1, 1.0);
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
+        list_insert(pain, 2, 1.1);
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
+        list_insert(pain, 3, 1.2);
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
+        list_insert(pain, 4, 1.3);
 
-        list_insert(&pain, 1, 1.4);
-        list_insert(&pain, 1, 1.5);
-        list_insert(&pain, 0, 1.6);
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
 
-        list_delete(&pain, 0, &a);
+        list_insert(pain, 2, 1.4);
+        list_insert(pain, 2, 1.5);
+        list_insert(pain, 1, 1.6);
+
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
+        printf("hello\n");
+
+        list_remove(pain, 1, &a);
+
+        list_verifier(pain, LIST_REMOVE_FUNCTION_IDENTIFIER);
 
         printf("my value %lg\n", a);
 
-        list_destruct(&pain);
+        list_slow_sort(pain);
+
+        list_verifier(pain, LIST_SORT_FUNCTION_IDENTIFIER);
+
+        list_destruct(pain);
     }
     #endif
 
@@ -124,17 +146,21 @@ void unit_tests()
         List *pain  = list_new(2);
         List *konan = list_new(10);
 
-        list_insert(&pain, 0, 1.0);
-        list_insert(&pain, 1, 1.1);
-        list_insert(&pain, 2, 1.2);
-        list_insert(&pain, 3, 1.3);
+        list_insert(pain, 0, 1.0);
+        list_insert(pain, 1, 1.1);
+        list_insert(pain, 2, 1.2);
+        list_insert(pain, 3, 1.3);
 
-        list_insert(&konan, 0, 10.4);
-        list_insert(&konan, 0, 10.5);
-        list_insert(&konan, 5, 10.6);
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
 
-        list_destruct(&pain);
-        list_destruct(&konan);
+        list_insert(konan, 0, 10.4);
+        list_insert(konan, 0, 10.5);
+        list_insert(konan, 5, 10.6);
+
+        list_verifier(konan, LIST_INSERT_FUNCTION_IDENTIFIER);
+
+        list_delete(pain);
+        list_delete(konan);
     }
     #endif
 
@@ -143,25 +169,52 @@ void unit_tests()
         printf("The sixth unit-test\n");
         List *pain  = list_new(2);
 
-        list_insert(&pain, 0, 100);
-        list_insert(&pain, 1, 101);
-        list_insert(&pain, 2, 102);
-        list_insert(&pain, 3, 103);
+        list_insert(pain, 1, 100);
+        list_insert(pain, 2, 101);
+        list_insert(pain, 3, 102);
+        list_insert(pain, 4, 103);
 
-        list_insert(&pain, 4, 104);
-        list_insert(&pain, 1, 105);
-        list_insert(&pain, 5, 106);
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
 
-        long long mid_index = 0;
-        find_index(pain, 2, &mid_index);
+        list_insert(pain, 5, 104);
+        list_insert(pain, 2, 105);
+        list_insert(pain, 6, 106);
 
-        printf("index %lld, this element %lg\n", mid_index, get_element(pain, mid_index));
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
+
+        size_t mid_index = 0;
+        list_find_index(pain, 2, &mid_index);
+
+        double value = 0;
+        list_get_element(pain, mid_index, &value);
+
+        printf("index %u, this element %lf\n", mid_index, value);
+
+        list_remove(pain, mid_index, &value);
+
+        list_verifier(pain, LIST_REMOVE_FUNCTION_IDENTIFIER);
+
+        list_delete(pain);
+    }
+    #endif
+
+    #ifdef SEVENTH_TEST
+    {
+        printf("The seventh unit-test\n");
+        List *pain  = list_new(2);
+
+        list_insert_back(pain, 3.14);
+        list_insert_back(pain, 0.0015926);
+
+        list_verifier(pain, LIST_INSERT_FUNCTION_IDENTIFIER);
 
         double value = 0;
 
-        list_delete(&pain, mid_index, &value);
+        list_remove(pain, 1, &value);
 
-        list_destruct(&pain);
+        list_verifier(pain, LIST_REMOVE_FUNCTION_IDENTIFIER);
+
+        list_delete(pain);
     }
     #endif
 }
