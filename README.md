@@ -23,17 +23,23 @@ where n is the amount of elements in the list. Avoid using them by putting eleme
 ---------------------------
 The examples of work of ***list_print_list_appearance***, which is visualisation of dump.
 
-###When list works coorectly, without invasions:
+### When list works coorectly, without invasions:
 <li>
-* Logical connections\n
-![logical connection ok](https://github.com/s-a-v-a-n-n-a/My-List/blob/main/example_of_ok.txt.png)\n
-* Physical connections\n
-![logical connection ok](https://github.com/s-a-v-a-n-n-a/My-List/blob/main/example_real_of_ok.txt.png)\n
+* Logical connections
+ ***
+![logical connection ok](https://github.com/s-a-v-a-n-n-a/My-List/blob/main/example_of_ok.txt.png)
+ ***
+* Physical connections
+ ***
+![logical connection ok](https://github.com/s-a-v-a-n-n-a/My-List/blob/main/example_real_of_ok.txt.png)
 
-###When list works uncoorectly, there were some invasions:
+### When list works uncoorectly, there were some invasions:
 <li>
-* Logical connections\n
-![logical connection bad](https://raw.githubusercontent.com/s-a-v-a-n-n-a/My-List/main/example.txt.png)\n
-* Physical connections\n 
+* Logical connections
+ ***
+![logical connection bad](https://raw.githubusercontent.com/s-a-v-a-n-n-a/My-List/main/example.txt.png)
+ ***
+* Physical connections
+ ***
 ![physical connection bad](https://github.com/s-a-v-a-n-n-a/My-List/blob/main/example_real.txt.png)\n
  
