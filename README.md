@@ -32,6 +32,7 @@ The examples of work of ***list_print_list_appearance***, which is visualisation
 * Physical connections
  ***
 ![logical connection ok](https://github.com/s-a-v-a-n-n-a/My-List/blob/main/example_real_of_ok.txt.png)
+</li>
 
 ### When list works uncoorectly, there were some invasions:
 <li>
@@ -41,5 +42,6 @@ The examples of work of ***list_print_list_appearance***, which is visualisation
  ***
 * Physical connections
  ***
-![physical connection bad](https://github.com/s-a-v-a-n-n-a/My-List/blob/main/example_real.txt.png)\n
+![physical connection bad](https://github.com/s-a-v-a-n-n-a/My-List/blob/main/example_real.txt.png)
+ </li>
  
