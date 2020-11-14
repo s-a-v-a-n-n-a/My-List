@@ -118,7 +118,7 @@ list_code        list_destruct             (List *that_list);
 Changes the capacity of the list
 
 @param[in]       that_list                 The construction of the list
-@param[in]       amount                    2, if you want to make list twice bigger, 0.5, if you if you want to make list twice smaller
+@param[in]       coefficient               2, if you want to make list twice bigger, 0.5, if you if you want to make list twice smaller
 
 Returns          LIST_OK                   If everything is ok\n
                  LIST_NULL                 If there were not pointers on units of list\n
@@ -128,7 +128,7 @@ Returns          LIST_OK                   If everything is ok\n
                  LIST_NO_MEMORY            If there is no memory to resize the list\n
                  LIST_TOO_BIG              If the new capacity is bigger than the maximum size of the type\n
 */
-list_code        list_resize               (List *that_list, const double amount);
+list_code        list_resize               (List *that_list, const double coefficient);
 /*!
 Inserts the value into the list
 

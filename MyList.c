@@ -87,7 +87,7 @@ list_code list_destruct(List *that_list)
     return LIST_OK;
 }
 
-list_code list_resize(List *that_list, const double amount)
+list_code list_resize(List *that_list, const double coefficient)
 {
     if (that_list->capacity > ((size_t)-1) / 2)
     {
@@ -96,7 +96,7 @@ list_code list_resize(List *that_list, const double amount)
         return LIST_TOO_BIG;
     }
 
-    size_t new_capacity = (size_t)(that_list->capacity * amount);
+    size_t new_capacity = (size_t)(that_list->capacity * coefficient);
 
     list_elem_type* new_data = (list_elem_type*)realloc(that_list->data, sizeof(list_elem_type) * (new_capacity + 1));
     if (new_data) that_list->data = new_data;
@@ -114,7 +114,7 @@ list_code list_resize(List *that_list, const double amount)
         return LIST_NO_MEMORY;
     }
 
-    if (amount > 1)
+    if (coefficient > 1)
     {
         for (size_t i = that_list->length + 1; i <= new_capacity; i++)
         {
@@ -433,7 +433,7 @@ list_code list_verifier(List *that_list, const char* function)
         return indicator;
     }
 
-    size_t index = 0;
+    size_t index = that_list->next[0];
 
     for (size_t i = 0; i < that_list->length; i++)
     {
@@ -447,6 +447,24 @@ list_code list_verifier(List *that_list, const char* function)
 
         index = that_list->next[index];
     }
+
+    long long connections_number = that_list->capacity - that_list->length;
+    long long *free_indexes = (long long*)calloc(that_list->capacity, sizeof(long long));
+
+    index = that_list->first_free;
+    for (int i = 0; i < connections_number; i++)
+    {
+        if (free_indexes[index])
+        {
+            ASSERTION(LIST_CONNECT_ERROR);
+            list_print_list_appearance(that_list, LIST_CONNECT_ERROR, function);
+            return TREE_CONNECT_ERROR;
+        }
+        free_indexes[index]++;
+
+        index = btree->[tree].next;
+    }
+    free(free_indexes);
 
     list_print_list_appearance(that_list, LIST_OK, function);
 
