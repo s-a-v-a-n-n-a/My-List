@@ -6,6 +6,7 @@
     Thank you for using this program!
     \warning The sortion takes the time of O(n), get_element - O(n) at bad cases. Please, try to put elements at the end of the list.\n
              Function list_construct will cause undefined behavior if you don't alloc the construction of the list before\n
+             You should install Graphviz on your PC to make pictures of list
     \authors Anna Savchuk
     \note    To change the type, change the typedef about list_elem_type in AllSettings.c\n
              At the end the last information about the list will be added to log_file\n
@@ -47,7 +48,7 @@ typedef enum list_code_errors
     LIST_CONNECT_ERROR
 } list_code;
 
-const char *state_text[]
+const char *list_state_text[]
 {
     "EVERYTHING IS OKAY\n",
     "LIST DOES NOT EXIST\n",
@@ -61,14 +62,29 @@ const char *state_text[]
     "ERROR WITH ACCESS TO ELEMENTS\n"
 };
 
-const char LIST_CONSTRUCT_FUNCTION_IDENTIFIER[]  = "CONSTRUCTION";
-const char LIST_DESTRUCT_FUNCTION_IDENTIFIER[]   = "DESTRUCTION";
-const char LIST_INSERT_FUNCTION_IDENTIFIER[]     = "INSERTION";
-const char LIST_RESIZE_FUNCTION_IDENTIFIER[]     = "RESIZING";
-const char LIST_REMOVE_FUNCTION_IDENTIFIER[]     = "REMOVING";
-const char LIST_FIND_INDEX_FUNCTION_IDENTIFIER[] = "FINDING";
-const char LIST_SORT_FUNCTION_IDENTIFIER[]       = "SORTING";
-const char LIST_GET_FUNCTION_IDENTIFIER[]        = "GETTING";
+typedef enum list_functions_identifiers
+{
+    CONSTRUCTION,
+    DESTRUCTION,
+    INSERTION,
+    RESIZING,
+    REMOVING,
+    FINDING,
+    SORTING,
+    GETTING
+} list_functions;
+
+const char *FUNCTION_IDENTIFIERS[]  =
+{
+    "CONSTRUCTION",
+    "DESTRUCTION",
+    "INSERTION",
+    "RESIZING",
+    "REMOVING",
+    "FINDING",
+    "SORTING",
+    "GETTING"
+};
 
 /*!
 Creates a new list and deletes it if the construction failed
@@ -130,7 +146,7 @@ Returns          LIST_OK                   If everything is ok\n
 */
 list_code        list_resize               (List *that_list, const double coefficient);
 /*!
-Inserts the value into the list
+Inserts the value into the list. It can get indexes from 0 to the number of indexes minus 1, where 0 means insertion to the end.
 
 @param[in]       that_list                 The construction of the list
 @param[in]       before_physical_index     The index to put value before
@@ -305,7 +321,7 @@ Outputs the information about the current state of the list into "log_file.html"
 @param[in]       code                      The code of the mistake
 @param[in]       who                       The code of the function requested for dump
 */
-void             list_print_list_appearance (List *that_list, list_code code, const char *function);
+void             list_print_list_appearance (List *that_list, list_code code, const list_functions function);
 
 /*!
 Checks if all pointers are valid
@@ -327,7 +343,7 @@ Returns          LIST_OK                   If everything is ok\n
                  LIST_UNDERFLOW            If the list is empty\n
                  LIST_OVERFLOW             If the index does not exist or can not be added
 */
-list_code        list_request_verifier       (List *that_list, const char *mode, size_t request);
+list_code        list_request_verifier       (List *that_list, const list_functions mode, size_t request);
 /*!
 Checks all of the states of the list
 

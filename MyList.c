@@ -15,7 +15,7 @@ List* list_new(size_t list_size)
     List* new_list = (List*)calloc(1, sizeof(List));
     if (!new_list)
     {
-        list_print_list_appearance(NULL, LIST_NO_CONSTRUCT, LIST_CONSTRUCT_FUNCTION_IDENTIFIER);
+        list_print_list_appearance(NULL, LIST_NO_CONSTRUCT, CONSTRUCTION);
         return NULL;
     }
 
@@ -54,7 +54,7 @@ list_code list_construct(List *that_list, const size_t list_size)
     if (!that_list->data || !that_list->next || !that_list->prev)
     {
         ASSERTION(LIST_NO_CONSTRUCT);
-        list_print_list_appearance(NULL, LIST_NO_CONSTRUCT, LIST_CONSTRUCT_FUNCTION_IDENTIFIER);
+        list_print_list_appearance(NULL, LIST_NO_CONSTRUCT, CONSTRUCTION);
         return LIST_NO_CONSTRUCT;
     }
     that_list->data[0] = NAN;
@@ -92,7 +92,7 @@ list_code list_resize(List *that_list, const double coefficient)
     if (that_list->capacity > ((size_t)-1) / 2)
     {
         ASSERTION(LIST_TOO_BIG);
-        list_print_list_appearance(that_list, LIST_TOO_BIG, LIST_RESIZE_FUNCTION_IDENTIFIER);
+        list_print_list_appearance(that_list, LIST_TOO_BIG, RESIZING);
         return LIST_TOO_BIG;
     }
 
@@ -110,7 +110,7 @@ list_code list_resize(List *that_list, const double coefficient)
     if (!new_data || !new_next || !new_prev)
     {
         ASSERTION(LIST_NO_MEMORY);
-        list_print_list_appearance(that_list, LIST_NO_MEMORY, LIST_RESIZE_FUNCTION_IDENTIFIER);
+        list_print_list_appearance(that_list, LIST_NO_MEMORY, RESIZING);
         return LIST_NO_MEMORY;
     }
 
@@ -131,7 +131,7 @@ list_code list_resize(List *that_list, const double coefficient)
 
 list_code list_insert(List *that_list, const size_t before_physical_index, const list_elem_type value)
 {
-    list_code request = list_request_verifier(that_list, LIST_INSERT_FUNCTION_IDENTIFIER, before_physical_index);
+    list_code request = list_request_verifier(that_list, INSERTION, before_physical_index);
     if (request != LIST_OK)
         return request;
 
@@ -165,7 +165,7 @@ list_code list_insert_front(List *that_list, const list_elem_type value)
 
 list_code list_insert_back(List *that_list, const list_elem_type value)
 {
-    return list_insert(that_list, that_list->prev[0], value);
+    return list_insert(that_list, 0, value);
 }
 
 list_code list_remove(List *that_list, const size_t physical_index, list_elem_type* value)
@@ -222,7 +222,7 @@ list_code list_find_index(List *that_list, const size_t logical_index, size_t *p
 
 list_code list_get_element(List *that_list, const size_t physical_index, list_elem_type *requested_element)
 {
-    list_code request = list_request_verifier(that_list, LIST_GET_FUNCTION_IDENTIFIER, physical_index);
+    list_code request = list_request_verifier(that_list, GETTING, physical_index);
     if (request != LIST_OK)
         return request;
 
@@ -258,7 +258,7 @@ size_t list_get_tail_index(List *that_list)
 
 list_code list_get_next_index(List *that_list, size_t physical_index, list_elem_type *next_index)
 {
-    list_code request = list_request_verifier(that_list, LIST_GET_FUNCTION_IDENTIFIER, physical_index);
+    list_code request = list_request_verifier(that_list, GETTING, physical_index);
     if (request != LIST_OK)
         return request;
 
@@ -269,7 +269,7 @@ list_code list_get_next_index(List *that_list, size_t physical_index, list_elem_
 
 list_code list_get_prev_index(List *that_list, size_t physical_index, list_elem_type *prev_index)
 {
-    list_code request = list_request_verifier(that_list, LIST_GET_FUNCTION_IDENTIFIER, physical_index);
+    list_code request = list_request_verifier(that_list, GETTING, physical_index);
     if (request != LIST_OK)
         return request;
 
@@ -287,7 +287,7 @@ list_code list_slow_sort(List *that_list)
         if (!new_data)
         {
             ASSERTION(LIST_NO_MEMORY);
-            list_print_list_appearance(that_list, LIST_NO_MEMORY, LIST_SORT_FUNCTION_IDENTIFIER);
+            list_print_list_appearance(that_list, LIST_NO_MEMORY, SORTING);
             list_destruct(that_list);
         }
 
@@ -321,10 +321,10 @@ list_code list_slow_sort(List *that_list)
 
 void list_print_errors(list_code code)
 {
-    printf("Error: %s\n", state_text[code]);
+    printf("Error: %s\n", list_state_text[code]);
 }
 
-void list_print_list_appearance(List *that_list, list_code code, const char* function)
+void list_print_list_appearance(List *that_list, list_code code, const list_functions function)
 {
     static long int doing = 0;
 
@@ -338,7 +338,7 @@ void list_print_list_appearance(List *that_list, list_code code, const char* fun
     fprintf(log, "<pre><font size=\"5\"  face=\"Times New Roman\">\n");
 
     fprintf(log, "<p><span style=\"font-weight: bold\">CURRENT STATE OF LIST</span></p>\n");
-    fprintf(log, "THE NEWS FROM %s\n", function);
+    fprintf(log, "THE NEWS FROM %s\n", FUNCTION_IDENTIFIERS[function]);
 
     fprintf(log, "%s", state_text[code]);
     if (that_list->sorted)
@@ -351,21 +351,22 @@ void list_print_list_appearance(List *that_list, list_code code, const char* fun
 
     fprintf(log, "</font><tt>\n");
 
-    #ifdef SLOW_PRINT
-    char picture_name[MAX_PICTURE_NAME] = "";
-    sprintf(picture_name, "%s", PICTURE_FILE_CODE);
+    char picture_name[MAX_PICTURE_NAME]          = "";
 
-    char picture_adding[MAX_PICTURE_NAME] = "";
+    char picture_adding[MAX_PICTURE_NAME]        = "";
     sprintf(picture_adding, "%d.txt", doing);
+
+    char picture_format_name[MAX_PICTURE_NAME]   = "";
+    char picture_format_adding[MAX_PICTURE_NAME] = "";
+    #ifdef SLOW_PRINT
+    sprintf(picture_name, "%s", PICTURE_FILE_CODE);
 
     strncat(picture_name, picture_adding, MAX_PICTURE_NAME);
 
-    char picture_format_name[MAX_PICTURE_NAME] = "";
     sprintf(picture_format_name, "%s", PICTURE_FILE_CODE);
 
     strncat(picture_format_name, picture_adding, MAX_PICTURE_NAME);
 
-    char picture_format_adding[MAX_PICTURE_NAME] = "";
     sprintf(picture_format_adding, ".%s", PICTURE_FORMAT);
 
     strncat(picture_format_name, picture_format_adding, MAX_PICTURE_NAME);
@@ -402,9 +403,9 @@ list_code list_is_pointer_valid(List *that_list)
     return LIST_OK;
 }
 
-list_code list_request_verifier(List *that_list, const char *mode, size_t request)
+list_code list_request_verifier(List *that_list, const list_functions mode, size_t request)
 {
-    if (!strcmp(mode, "REMOVING"))
+    if (mode == REMOVING)
     {
         if ((size_t)(that_list->length) <= 0)
         {
@@ -413,7 +414,7 @@ list_code list_request_verifier(List *that_list, const char *mode, size_t reques
             return LIST_UNDERFLOW;
         }
     }
-    if (request > (that_list->length + 1))
+    if (request > (that_list->length))
     {
         ASSERTION(LIST_OVERFLOW);
         list_print_list_appearance(that_list, LIST_OVERFLOW, mode);
@@ -423,7 +424,7 @@ list_code list_request_verifier(List *that_list, const char *mode, size_t reques
     return LIST_OK;
 }
 
-list_code list_verifier(List *that_list, const char* function)
+list_code list_verifier(List *that_list, const list_functions function)
 {
     list_code indicator = list_is_pointer_valid(that_list);
     if (indicator != LIST_OK)
@@ -437,8 +438,7 @@ list_code list_verifier(List *that_list, const char* function)
 
     for (size_t i = 0; i < that_list->length; i++)
     {
-        if (index != that_list->prev[that_list->next[index]] ||
-          ((that_list->next[index] == 0 && i < that_list->length)))
+        if (index != that_list->prev[that_list->next[index]] && i < that_list->length - 1)
         {
             ASSERTION(LIST_CONNECT_ERROR);
             list_print_list_appearance(that_list, LIST_CONNECT_ERROR, function);
@@ -452,17 +452,17 @@ list_code list_verifier(List *that_list, const char* function)
     long long *free_indexes = (long long*)calloc(that_list->capacity, sizeof(long long));
 
     index = that_list->first_free;
-    for (int i = 0; i < connections_number; i++)
+    for (int i = 0; i < connections_number - 1; i++)
     {
         if (free_indexes[index])
         {
             ASSERTION(LIST_CONNECT_ERROR);
             list_print_list_appearance(that_list, LIST_CONNECT_ERROR, function);
-            return TREE_CONNECT_ERROR;
+            return LIST_CONNECT_ERROR;
         }
         free_indexes[index]++;
 
-        index = btree->[tree].next;
+        index = that_list->next[index];
     }
     free(free_indexes);
 
