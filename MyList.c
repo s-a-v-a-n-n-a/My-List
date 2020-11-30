@@ -194,7 +194,7 @@ list_code list_remove(List *that_list, const size_t physical_index, list_elem_ty
     return LIST_OK;
 }
 
-list_code list_insert_front(List *that_list, list_elem_type *value)
+list_code list_remove_front(List *that_list, list_elem_type *value)
 {
     return list_remove(that_list, that_list->next[0], value);
 }
